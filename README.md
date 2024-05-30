@@ -8,7 +8,7 @@ I currently maintain my family and personal calendars on Outlook. I pull those c
 - PHP
 
 ## My Approach
-This is not the cleanest or most scalable code, but the quick and dirty suits my personal needs. By default, the page loads displaying the current week and provides a dropdown to select weeks within the previous and next 15 days from "today".  There are also checkboxes to toggle the display of specific calendars.
+This is not the cleanest or most scalable code, but the quick and dirty suits my personal needs. By default, the page loads displaying the current week and provides a dropdown to select weeks within the previous and next 15 days from "today".  There are also checkboxes to toggle the display of specific calendars.  These elements are hidden in print view.
 
 To create the week grid, I determine the date of this week's Sunday, then iterate for seven days.  If the date of the iterator matches an event date, display it with appropriate styling.
 

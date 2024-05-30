@@ -2,7 +2,7 @@
 Web based weekly calendar with print-friendly CSS layout
 
 ## Background
-I currently maintain my family and personal calendars on Outlook. I pull those calendars down and use them in a few places like my private wiki, and I also wanted a weekly view of events that I could print out and share/display for my family.  This code/repo focuses primarily on the capability to format that display on the web as well as a print-friendly layout.
+I currently maintain my family and personal calendars on Outlook. I pull those calendars down and use them in a few places like my private wiki, and I also wanted a weekly view of events that I could print out and share/display for my family.  This code/repo primarily focuses on the capability to format that on the web as well as a print-friendly layout.
 
 ## What You'll Need
 - PHP

@@ -6,6 +6,7 @@ I currently maintain my family and personal calendars on Outlook. I pull those c
 
 ## What You'll Need
 - PHP
+- calendar events in some parsable format (or not, just use the HTML/CSS as necessary)
 
 ## My Approach
 This is not the cleanest or most scalable code, but the quick and dirty suits my personal needs. By default, the page loads displaying the current week and provides a dropdown to select weeks within the previous and next 15 days from "today".  There are also checkboxes to toggle the display of specific calendars.  These elements are hidden in print view.

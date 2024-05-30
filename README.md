@@ -1,4 +1,4 @@
-# Printable-Weekly-Agenda
+# Printable Weekly Agenda
 Web based weekly calendar with print-friendly CSS layout
 
 ## Background
@@ -7,8 +7,26 @@ I currently maintain my family and personal calendars on Outlook. I pull those c
 ## What You'll Need
 - PHP
 
-## Screenshots
+## My Approach
+This is not the cleanest or most scalable code, but the quick and dirty suits my personal needs. By default, the page loads displaying the current week and provides a dropdown to select weeks within the previous and next 15 days from "today".  There are also checkboxes to toggle the display of specific calendars.
+
 ![collapsible tree view](screenshots/bk-tree.png "tree view")
 
-## My Approach
-This is not the cleanest or most scalable solution, but the quick and dirty suits my personal needs. By default, the page loads displaying the current week and provides a dropdown to select weeks within the previous and next 15 days from "today".  There are also checkboxes to toggle the display of specific calendars.
+To create the week grid, I determine the date of this week's Sunday, then iterate for seven days.  If the date of the iterator matches an event date, display it with appropriate styling.
+
+![collapsible tree view](screenshots/bk-tree.png "tree view")
+
+For display and printing, I wanted each day cell to fill all vertical space.  This is accomplished primarily with the following CSS:
+```
+.weektable {
+    border: 0;
+    height: 90vh;
+    table-layout: fixed;
+    width: 100%;
+}
+.weektable td {
+    border: 1px solid black;
+    padding: 0;
+    vertical-align: top;
+}
+```

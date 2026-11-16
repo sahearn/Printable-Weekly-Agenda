@@ -98,60 +98,52 @@
 <body>
 
 <?php
-
 date_default_timezone_set('America/New_York');
 
-const EVENTS = "Events";
-const HOLIDAYS = "Holidays";
-const WORK = "Work";
-
-$upcomingCals = array();
-
-// php is weird, so to get date of sunday of this week, use the following
-// this is for building the week (starting with 0/Sunday) based on today's date
-$passSunday = "sunday -1 week";
-$thisWeekSunday = date("Y-m-d", strtotime($passSunday));
-if (isset($_GET['wk'])) {
-    $passSunday = $_GET['wk'];
+// get the Sunday of the current week using DateTime day-of-week math
+$dtNow = new DateTime();
+$dayOfWeek = (int)$dtNow->format('w'); // 0 = Sunday, 1 = Monday, etc.
+if ($dayOfWeek > 0) {
+    $dtNow->modify("-{$dayOfWeek} days");
 }
+$thisWeekSunday = $dtNow->format('Y-m-d');
+
+// fix incoming GET parameter to Y-m-d to prevent single/double-digit issues
+$passSunday = $thisWeekSunday;
+if (isset($_GET['wk']) && !empty($_GET['wk'])) {
+    $passSunday = date('Y-m-d', strtotime($_GET['wk']));
+}
+
 $firstday = date("m/d/Y h:i:s A T", strtotime($passSunday));
 $now = new DateTime($firstday);
 $nowPlusDays = clone $now;
 $nowPlusDays->modify('+9 days');
 
-// [snip]
-// code to grab my Outlook calendars and put them into an array with date, time, and description
-// details of this are beyond the scope of this repo
-$output = $calendarEvents;
+// used when building the dropdown, so i can select/print other weeks if desired
+function getDateForSpecificDayBetweenDates($startDate, $endDate, $weekdayNumber) {
+    $current = new DateTime($startDate);
+    $end = new DateTime($endDate);
+    $dateArr = array();
 
+    // advance day-by-day until i hit the desired weekday (0 = Sunday)
+    while ((int)$current->format('w') !== $weekdayNumber) {
+        $current->modify('+1 day');
+    }
+    
+    // step forward weekly using DateTime to avoid DST/timezone drift
+    while ($current <= $end) {
+        $dateArr[] = $current->format('Y-m-d');
+        $current->modify('+7 days');
+    }
+
+    return($dateArr);
+}
 ?>
 
 <div id="filterDiv">
     <form>
     <table id="filterTable" style="border-bottom:1px solid gray;padding-bottom:2px;" width="100%">
     <?php
-
-    // next 40ish lines are just for building the dropdown, so I can select/print other weeks if desired
-    function getDateForSpecificDayBetweenDates($startDate, $endDate, $weekdayNumber) {
-        $startDate = strtotime($startDate);
-        $endDate = strtotime($endDate);
-
-        $dateArr = array();
-
-        do {
-            if (date("w", $startDate) != $weekdayNumber) {
-                $startDate += (24 * 3600); // add 1 day
-            }
-        } while (date("w", $startDate) != $weekdayNumber);
-        
-        while ($startDate <= $endDate) {
-            $dateArr[] = date('Y-m-d', $startDate);
-            $startDate += (7 * 24 * 3600); // add 7 days
-        }
-
-        return($dateArr);
-    }
-    
     $currdate = new DateTime("now");
     $currMin13 = clone $currdate;
     $currMin13->modify('-15 days');
@@ -160,12 +152,17 @@ $output = $calendarEvents;
     
     $dateArr = getDateForSpecificDayBetweenDates($currMin13->format("Y-m-d"), $currAdd13->format("Y-m-d"), 0);
 
+    // get active comparison date normalized to Y-m-d
+    $activeWeek = isset($_GET['wk']) && !empty($_GET['wk']) ? date('Y-m-d', strtotime($_GET['wk'])) : $thisWeekSunday;
+
     echo '<tr>';
     echo '<td>' . 'Select week: ';
     echo '&nbsp;<select name="wk" onchange="this.form.submit()">';
     foreach ($dateArr as $sunday) {
         echo '<option value="' . $sunday . '"';
-        if ((isset($_GET['wk']) && $_GET['wk'] == $sunday) || ($sunday == $thisWeekSunday)) { echo ' selected'; }
+        if ($sunday === $activeWeek) { 
+            echo ' selected'; 
+        }
         echo '>' . $sunday . '</option>';
     }
     echo '</select>' . '&nbsp; &nbsp;</td>';
@@ -198,6 +195,9 @@ $output = $calendarEvents;
         <tr>
 
         <?php
+        // get extracted calendar data from my outlook api read
+        $calArrayAll = json_decode(file_get_contents('/path/to/calendarView-batch.json'), true);
+
         for ($i = 0; $i < 7; $i++) {
             $nowPlusDay = clone $now;
             $nowPlusDay->modify('+'.$i.' days');
@@ -210,21 +210,39 @@ $output = $calendarEvents;
             echo '<div class="dayOfMonth">' . $nowPlusDay->format("M j") . '</div>' . "\n";
             
             echo '<div class="dayBlock">' . "\n";
-            
-            // how I got the $output calendar array is beyond the scope of this repo
-            foreach ($output as $daily) {
-                if ($daily['date'] == $nowPlusDay->format("Y-m-d")) {
-                    if ((isset($_GET['frmcal']) && in_array($daily['which'], $_GET['frmcal'])) || !isset($_GET['wk'])) {
-                        echo '<div class="entry' . $daily['which'] . '">';
-                            if ($daily['time'] != 'All Day') {
-                                echo '<span class="entryTime">' . $daily['time'] . '</span>';
-                                echo '<br>';
-                            }
-                            echo $daily['summary'];
-                        echo '</div>' . "\n";
+
+            foreach ($calArrayAll as $date => $events) {
+                foreach ($events as $event) {
+                    switch($event['calendarId']) {
+                        case 'H':
+                            $whichCal = 'Holidays';
+                            break;
+                        case 'W':
+                            $whichCal = 'Work';
+                            break;
+                        default:
+                            $whichCal = 'Events';
+                            break;
+                    }
+
+                    $runningDate = new DateTime($date, new DateTimeZone('America/New_York'));
+                    if ($runningDate->format('Y-m-d') == $nowPlusDay->format("Y-m-d")) {
+                        if ((isset($_GET['frmcal']) && in_array($whichCal, $_GET['frmcal'])) || !isset($_GET['wk'])) {
+                            echo '<div class="entry' . $whichCal . '">';
+                                if (!$event['allDay']) {
+                                    $displayTime = new DateTime($event['time'], new DateTimeZone('America/New_York'));
+                                    $displayTime = $displayTime->format('g:i a');
+
+                                    echo '<span class="entryTime">' . $displayTime . '</span>';
+                                    echo '<br>';
+                                }
+                                echo $event['title'];
+                            echo '</div>' . "\n";
+                        }
                     }
                 }
             }
+
             echo '</div>' . "\n";
             
             echo '</td>' . "\n";
@@ -240,14 +258,14 @@ $output = $calendarEvents;
                 $nowPlusDay = clone $now;
                 $nowPlusDay->modify('+'.$i.' days');
                 
-                foreach ($output as $daily) {
-                    if ($daily['date'] == $nowPlusDay->format("Y-m-d")) {
-                        $displayDate = new DateTime($daily['date']);
-                        $displayDate->setTimezone(new DateTimeZone('America/New_York'));
-                        $displayDate = $displayDate->format("n/j");
+                foreach ($calArrayAll as $date => $events) {
+                    foreach ($events as $event) {
+                        $runningDate = new DateTime($date, new DateTimeZone('America/New_York'));
+                        if ($runningDate->format('Y-m-d') == $nowPlusDay->format("Y-m-d")) {
+                            $displayDate = $runningDate->format('n/j');
 
-                        echo '<span class="entryTime">' . $displayDate . ':</span> ' . $daily['summary'];
-                        if ($daily != end($output)) { echo ', '; }
+                            echo '<span class="entryTime">' . $displayDate . ':</span> ' . $event['title'] . ' &nbsp;';
+                        }
                     }
                 }
             }
